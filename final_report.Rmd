@@ -1,0 +1,85 @@
+---
+title: "Regression Analysis on Concrete Compressive Strength Data Set"
+author: "1. Balaji Baskaran, 2. Nansita Subramanian, 3. Raunak Avinash Deshmukh"
+date: "December 6, 2015"
+output: html_document
+---
+
+```{r, echo=FALSE}
+#let the required libraries go in here
+library(corrplot)
+
+```
+
+
+Data Set URL: http://archive.ics.uci.edu/ml/datasets/Concrete+Compressive+Strength
+
+***Information about the data set:***
+
+
+The features in the data set are,
+
+No| Name                    
+--| ----
+1 |  Cement (component 1) -- quantitative -- kg in a m3 mixture -- Input Variable 
+2 |  Blast Furnace Slag (component 2) -- quantitative -- kg in a m3 mixture -- Input Variable    
+3 |  Fly Ash (component 3) -- quantitative -- kg in a m3 mixture -- Input Variable 
+4 |  Water (component 4) -- quantitative -- kg in a m3 mixture -- Input Variable 
+5 |  Superplasticizer (component 5) -- quantitative -- kg in a m3 mixture -- Input Variable 
+6 |  Coarse Aggregate (component 6) -- quantitative -- kg in a m3 mixture -- Input Variable 
+7 |  Fine Aggregate (component 7)	-- quantitative -- kg in a m3 mixture -- Input Variable 
+8 |  Age -- quantitative -- Day (1~365) -- Input Variable 
+9 |  Concrete compressive strength -- quantitative -- MPa -- Output Variable
+  
+
+***Steps***
+1. Visualize the data  
+2. analyse the features  
+3. correlation?  
+4. PCA  
+5. scaling or centring  
+6. regression model  
+7. test the model  
+8. re do from 5
+
+0. read the data
+```{r}
+
+cdata <- read.csv("CConcrete_Data.csv",h=T)
+#check for NA
+ifelse(length(which(is.na(cdata)))==0, "NO NAs available", "Yes,NAs are available")
+```
+  
+1. Visualize the data
+```{r}
+pairs(cdata)
+```
+since this is a dataset with 1000+ records and 9 features, pairwise plot is not-so-great method to visualise. We can use a image plot of correlation matrix to find the correlation between the different features or we can hand pick the fetaures and compare them using scatter plot.  
+The image plot of the correlation matrix,
+
+***I may have to remove the y variable!!***
+
+```{r}
+C_corr <- cor(round(cdata,2))
+corrplot(C_corr, method = "pie")
+corrplot.mixed(C_corr, lower = "number", upper="square",order="AOE")
+```
+
+As seen in the correlation plot, (water, plasticizer) are correlated and (water, aggregate) are correlated, (cement, Fly_Ash) are correlated.
+
+```{r}
+par(mfrow=c(2,2))
+attach(cdata)
+plot(cdata$Water, cdata$Superplasticizer)
+plot(cdata$Water,cdata$Coarse_Aggregate)
+plot(cdata$Cement, cdata$Fly_Ash)
+```
+
+Next, we can do a PCA analysis to learn the features that are of relatively important compared to others.
+
+#PCA analyis#
+
+
+
+
+
