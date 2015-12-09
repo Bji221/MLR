@@ -1,0 +1,251 @@
+---
+title: "Regression Analysis on Concrete Compressive Strength Data Set"
+author: "1. Balaji Baskaran, 2. Nansita Subramanian, 3. Raunak Avinash Deshmukh"
+date: "December 6, 2015"
+output: html_document
+---
+
+```{r, echo=FALSE}
+#let the required libraries go in here
+library(corrplot)
+
+```
+
+
+Data Set URL: http://archive.ics.uci.edu/ml/datasets/Concrete+Compressive+Strength
+
+***Information about the data set:***
+
+
+The features in the data set are,
+
+No| Name                    
+--| ----
+1 |  Cement (component 1) -- quantitative -- kg in a m3 mixture -- Input Variable 
+2 |  Blast Furnace Slag (component 2) -- quantitative -- kg in a m3 mixture -- Input Variable    
+3 |  Fly Ash (component 3) -- quantitative -- kg in a m3 mixture -- Input Variable 
+4 |  Water (component 4) -- quantitative -- kg in a m3 mixture -- Input Variable 
+5 |  Superplasticizer (component 5) -- quantitative -- kg in a m3 mixture -- Input Variable 
+6 |  Coarse Aggregate (component 6) -- quantitative -- kg in a m3 mixture -- Input Variable 
+7 |  Fine Aggregate (component 7)	-- quantitative -- kg in a m3 mixture -- Input Variable 
+8 |  Age -- quantitative -- Day (1~365) -- Input Variable 
+9 |  Concrete compressive strength -- quantitative -- MPa -- Output Variable
+  
+
+***Steps***
+1. Visualize the data  
+2. analyse the features  
+3. correlation?  
+4. PCA  
+5. scaling or centring  
+6. regression model  
+7. test the model  
+8. re do from 5
+
+0. read the data
+```{r}
+
+cdata <- read.csv("CConcrete_Data.csv",h=T)
+#check for NA
+ifelse(length(which(is.na(cdata)))==0, "NO NAs available", "Yes,NAs are available")
+```
+  
+1. Visualize the data
+```{r}
+pairs(cdata,pch=20)
+n=dim(cdata)[1]
+names(cdata)
+par(mfrow=c(1,7))
+hist(cdata$Cement,main="Distance") 
+hist(cdata$Blast_Furnace_Slag,main="Blast_Furnace_Slag")
+hist(cdata$Fly_Ash,main="Fly_Ash")
+hist(cdata$Water,main="Water")
+hist(cdata$Superplasticizer,main="Superplasticizer")
+hist(cdata$Coarse_Aggregate,main="Coarse_Aggregate")
+hist(cdata$Fine_Aggregate,main="Fine_Aggregate")
+hist(cdata$Age_indays,main="Age_indays")
+hist(cdata$Concrete_compressive_strength,main="Concrete_compressive_strength")
+```
+since this is a dataset with 1000+ records and 9 features, pairwise plot is not-so-great method to visualise. We can use a image plot of correlation matrix to find the correlation between the different features or we can hand pick the fetaures and compare them using scatter plot.  
+The image plot of the correlation matrix,
+
+***I may have to remove the y variable!!***
+
+```{r}
+C_corr <- cor(round(cdata,2))
+corrplot(C_corr, method = "pie")
+corrplot.mixed(C_corr, lower = "number", upper="square",order="AOE")
+```
+
+As seen in the correlation plot, (water, plasticizer) are correlated and (water, aggregate) are correlated, (cement, Fly_Ash) are correlated.
+
+```{r}
+par(mfrow=c(2,2))
+attach(cdata)
+plot(cdata$Water, cdata$Superplasticizer)
+plot(cdata$Water,cdata$Coarse_Aggregate)
+plot(cdata$Cement, cdata$Fly_Ash)
+
+```
+
+Next, we can do a PCA analysis to learn the features that are of relatively important compared to others.
+
+#Modeling the dataset
+
+```{r}
+ConcreteModel=lm(cdata$Concrete_compressive_strength~cdata$Cement+cdata$Blast_Furnace_Slag+cdata$Fly_Ash+cdata$Water+cdata$Superplasticizer+cdata$Coarse_Aggregate+cdata$Fine_Aggregate+cdata$Age_indays)
+
+```
+
+#ModelChecking
+
+The model checking is performed in this section using the t-test and f-test knowledge. It is important to do this because some regressors don't impact the response variable directly and hence are redundant.
+
+```{r}
+library(car)
+summary(ConcreteModel)
+vif(ConcreteModel)
+plot(ConcreteModel)
+t_critical=qt(0.975,n-9)
+t_critical
+f_critical=qf(0.95,1,n-9)
+f_critical
+anova(ConcreteModel)
+#Residual plots
+SSres=sum((ConcreteModel$residuals-mean(ConcreteModel$residuals))^2)
+MSres=SSres/(n-9)
+stdResiduals=ConcreteModel$residuals/sqrt(MSres)
+stdResiduals
+#Outlier assumption
+which(stdResiduals>3)
+#calculate the student residual
+studentized_res=ConcreteModel$residuals/sqrt(MSres)/sqrt(1-lm.influence(ConcreteModel)$hat)
+# PRESS residuals
+PRESS_res=ConcreteModel$residuals/(1 - lm.influence(ConcreteModel)$hat)
+#R-student
+rstudent=rstudent(ConcreteModel)
+
+#Residual Plots
+
+# plot all residual and leverage
+# partition the canvas into 6 columns.
+
+plot(ConcreteModel$fitted.values,ConcreteModel$residuals,pch=20,ylab="residual",xlab="fitted
+value")
+abline(h=0,col="grey")
+plot(ConcreteModel$fitted.values,stdResiduals,pch=20,ylab="standardized
+residual",xlab="fitted value")
+abline(h=0,col="grey")
+plot(ConcreteModel$fitted.values,studentized_res,pch=20,ylab="studentized
+residual",xlab="fitted value")
+abline(h=0,col="grey")
+plot(ConcreteModel$fitted.values,PRESS_res,pch=20,ylab="PRESS residual",xlab="fitted
+value")
+abline(h=0,col="grey")
+plot(ConcreteModel$fitted.values,rstudent,pch=20,ylab="R student",xlab="fitted value")
+abline(h=0,col="grey")
+plot(ConcreteModel$fitted.values,lm.influence(ConcreteModel)$hat,pch=20,ylab="leverage",xlab="fitted value")
+```
+
+
+We observe that the plots seem to be fine and well scatterred, ut its possible we are over fitting the model with the insignificant variables in the model. Also the residuals are quite high for some variables  thus there are outliers present in the data as well. So we will be fitting the model with the significant variables. Remember the R^2^ value should be ideally equal to one, also the plot should be linear, and all the regressors should be significant. These are the objectives we will keep in mind while doing the model fitting in the subsequent sections.Also the R^2^ value depends upon the prediction and though ideally should be 1 we can accept values above 0.7.
+
+
+#Model Fitting
+
+If we observe the summary of the derived model we see that the Coarse_Aggregate and Fine_Aggregate  regressors are found to be insignificant, so we will remove these regressors and fit the model again and check whether there is any improvement in the residual plots,T-tests and F-tests values.
+
+```{r}
+#Fitting model without insignificant regressors Coarse_Aggregate & Fine_Aggregate
+ConcreteModel2=lm(cdata$Concrete_compressive_strength~cdata$Cement+cdata$Blast_Furnace_Slag+cdata$Fly_Ash+cdata$Water+cdata$Superplasticizer+cdata$Age_indays)
+summary(ConcreteModel2)
+vif(ConcreteModel2)
+plot(ConcreteModel2)
+t_critical=qt(0.975,n-7)
+t_critical
+f_critical=qf(0.95,1,n-7)
+f_critical
+anova(ConcreteModel2)
+anova(ConcreteModel,ConcreteModel2)
+```
+
+Now even if we get rid of the Coarse_Aggregate and Fine_Aggregate regressors the model does not alter much and thus it does not affect the response variable to a greater extent.
+Also we can see the available regressors seem to be significant and the residual plots look linear. But the variance is high giving rise to low R-squared values. Thus we need to add the squared estimate term of the regressors to our model.
+
+#estimated square
+
+```{r}
+cor(cdata[1:9])
+ConcreteModel3=lm(cdata$Concrete_compressive_strength~cdata$Cement+cdata$Blast_Furnace_Slag+cdata$Fly_Ash+cdata$Water+cdata$Superplasticizer+cdata$Age_indays+I(cdata$Age_indays^2))
+summary(ConcreteModel3)
+vif(ConcreteModel3)
+plot(ConcreteModel3)
+t_critical=qt(0.975,n-8)
+t_critical
+f_critical=qf(0.95,1,n-8)
+f_critical
+anova(ConcreteModel3)
+anova(ConcreteModel2,ConcreteModel3)
+```
+
+The vif can be a problem causing the multi collinearity, thus we should centre the values to prevent it. Thus remodelling with centred values.
+
+```{r}
+centredAge=cdata$Age_indays-mean(cdata$Age_indays)
+centredCement=cdata$Cement-mean(cdata$Cement)
+ConcreteModel4=lm(cdata$Concrete_compressive_strength~centredCement+I(centredCement^2)+cdata$Water+cdata$Blast_Furnace_Slag+cdata$Blast_Furnace_Slag+centredAge+cdata$Fly_Ash+I(centredAge^2))
+summary(ConcreteModel4)
+plot(ConcreteModel4)
+vif(ConcreteModel4)
+t_critical=qt(0.975,n-8)
+t_critical
+f_critical=qf(0.95,1,n-8)
+f_critical
+anova(ConcreteModel4)
+anova(ConcreteModel3,ConcreteModel4)
+
+```
+
+We can use higher degrees of the regressor to reduce the variance but it gives rise to multi-collinearity. So we are better off with this model. Also we can add another squared term, looking at the correlation matrix cement would be a better choice but again it will be a trade off between multicollinearity and low variance.
+
+#Final plots and testing
+
+```{r}
+#Residual plots
+SSres=sum((ConcreteModel4$residuals-mean(ConcreteModel4$residuals))^2)
+MSres=SSres/(n-8)
+stdResiduals=ConcreteModel4$residuals/sqrt(MSres)
+stdResiduals
+#Outlier assumption
+which(stdResiduals>3)
+#calculate the student residual
+studentized_res=ConcreteModel4$residuals/sqrt(MSres)/sqrt(1-lm.influence(ConcreteModel4)$hat)
+# PRESS residuals
+PRESS_res=ConcreteModel4$residuals/(1 - lm.influence(ConcreteModel4)$hat)
+#R-student
+rstudent=rstudent(ConcreteModel4)
+
+#Residual Plots
+
+# plot all residual and leverage
+
+
+plot(ConcreteModel4$fitted.values,ConcreteModel4$residuals,pch=20,ylab="residual",xlab="fitted
+value")
+abline(h=0,col="grey")
+plot(ConcreteModel4$fitted.values,stdResiduals,pch=20,ylab="standardized
+residual",xlab="fitted value")
+abline(h=0,col="grey")
+plot(ConcreteModel4$fitted.values,studentized_res,pch=20,ylab="studentized
+residual",xlab="fitted value")
+abline(h=0,col="grey")
+plot(ConcreteModel4$fitted.values,PRESS_res,pch=20,ylab="PRESS residual",xlab="fitted
+value")
+abline(h=0,col="grey")
+plot(ConcreteModel4$fitted.values,rstudent,pch=20,ylab="R student",xlab="fitted value")
+abline(h=0,col="grey")
+plot(ConcreteModel4$fitted.values,lm.influence(ConcreteModel4)$hat,pch=20,ylab="leverage",xlab="fitted value")
+```
+
+
+#PCA analyis#
